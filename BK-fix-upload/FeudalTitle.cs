@@ -1,0 +1,671 @@
+using System.Collections.Generic;
+using System.Linq;
+using BannerKings.Extensions;
+using BannerKings.Managers.Skills;
+using BannerKings.Managers.Titles.Governments;
+using BannerKings.Managers.Titles.Laws;
+using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Actions;
+using TaleWorlds.CampaignSystem.Settlements;
+using TaleWorlds.Core;
+using TaleWorlds.Library;
+using TaleWorlds.Localization;
+using TaleWorlds.SaveSystem;
+
+namespace BannerKings.Managers.Titles
+{
+    public class FeudalTitle
+    {
+        public FeudalTitle(TitleType type, Settlement fief, List<FeudalTitle> vassals, Hero deJure, Hero deFacto, 
+            TextObject name, FeudalContract contract, string stringId = null, TextObject fullName = null)
+        {
+            TitleType = type;
+            Fief = fief;
+            Vassals = vassals;
+            this.deJure = deJure;
+            this.deFacto = deFacto;
+            if (fullName != null)
+            {
+                FullName = fullName;
+                CustomName = true;
+            }
+            else
+            {
+                CultureObject culture = deJure != null ? deJure.Culture : null;
+                FullName = new TextObject("{=wMius2i9}{TITLE} of {NAME}")
+                                .SetTextVariable("TITLE", Utils.TextHelper.GetTitlePrefix(type, culture))
+                                .SetTextVariable("NAME", name);
+            }
+
+            shortName = name;
+            Contract = contract;
+            DueTax = 0;
+            claims = new Dictionary<Hero, ClaimType>();
+            deJureDrift = new Dictionary<FeudalTitle, float>();
+            StringId = stringId;
+            Duties = new Dictionary<ContractDuty, CampaignTime>();
+            Priority = false;
+        }
+
+        [SaveableProperty(1)] public TitleType TitleType { get; private set; }
+        [SaveableProperty(2)] public Settlement Fief { get; private set; }
+        [SaveableProperty(3)] public List<FeudalTitle> Vassals { get; private set; }
+        [Save
+ableProperty(4)] public Hero deJure { get; internal set; }
+        [SaveableProperty(5)] public Hero deFacto { get; internal set; }
+        [SaveableProperty(6)] public TextObject FullName { get; private set; }
+        [SaveableProperty(7)] public TextObject shortName { get; private set; }
+        [SaveableProperty(8)] public float DueTax { get; set; }
+        [SaveableProperty(9)] public FeudalTitle Sovereign { get; private set; }
+        [SaveableProperty(10)] public FeudalContract Contract { get; private set; }
+        [SaveableProperty(11)] private Dictionary<Hero, ClaimType> claims { get; set; }
+        [SaveableProperty(12)] private Dictionary<Hero, CampaignTime> ongoingClaims { get; set; }
+        [SaveableProperty(13)] private Dictionary<FeudalTitle, float> deJureDrift { get; set; }
+        [SaveableProperty(14)] public string StringId { get; private set; }
+        [SaveableProperty(15)] public bool CustomName { get; private set; }
+        [SaveableProperty(16)] public Dictionary<ContractDuty, CampaignTime> Duties { get; private set; }
+        [SaveableProperty(17)] public bool Priority { get; internal set; }
+
+        public void PostInitialize()
+        {
+            Duties ??= new Dictionary<ContractDuty, CampaignTime>();
+            if (deJure != null) if (deJure.Culture == null || deJure.Clan == null) // [BKTitleGuard] log the culprit hero
+            if (deJure != null) {
+            if (deJure != null)     TaleWorlds.Library.Debug.Print("[BKTitleGuard] fief='" + (Fief != null ? Fief.StringId : "null") + "' title='" + (shortName != null ? shortName.ToString() : "null") + "' deJure='" + deJure.StringId + "' name='" + deJure.Name + "' culture='" + (deJure.Culture != null ? deJure.Culture.StringId : "NULL") + "' clan='" + (deJure.Clan != null ? deJure.Clan.StringId : "NULL") + "' kingdom='" + (deJure.Clan != null && deJure.Clan.Kingdom != null ? deJure.Clan.Kingdom.StringId : "NULL") + "'");
+            if (deJure != null) }
+            if (deJure != null) Contract.PostInitialize(deJure.Clan?.Kingdom, deJure.Culture); // [BKTitleGuard]using System.Collections.Generic;
+using System.Linq;
+using BannerKings.Extensions;
+using BannerKings.Managers.Skills;
+using BannerKings.Managers.Titles.Governments;
+using BannerKings.Managers.Titles.Laws;
+using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Actions;
+using TaleWorlds.CampaignSystem.Settlements;
+using TaleWorlds.Core;
+using TaleWorlds.Library;
+using TaleWorlds.Localization;
+using TaleWorlds.SaveSystem;
+
+namespace BannerKings.Managers.Titles
+{
+    public class FeudalTitle
+    {
+        public FeudalTitle(TitleType type, Settlement fief, List<FeudalTitle> vassals, Hero deJure, Hero deFacto, 
+            TextObject name, FeudalContract contract, string stringId = null, TextObject fullName = null)
+        {
+            TitleType = type;
+            Fief = fief;
+            Vassals = vassals;
+            this.deJure = deJure;
+            this.deFacto = deFacto;
+            if (fullName != null)
+            {
+                FullName = fullName;
+                CustomName = true;
+            }
+            else
+            {
+                CultureObject culture = deJure != null ? deJure.Culture : null;
+                FullName = new TextObject("{=wMius2i9}{TITLE} of {NAME}")
+                                .SetTextVariable("TITLE", Utils.TextHelper.GetTitlePrefix(type, culture))
+                                .SetTextVariable("NAME", name);
+            }
+
+            shortName = name;
+            Contract = contract;
+            DueTax = 0;
+            claims = new Dictionary<Hero, ClaimType>();
+            deJureDrift = new Dictionary<FeudalTitle, float>();
+            StringId = stringId;
+            Duties = new Dictionary<ContractDuty, CampaignTime>();
+            Priority = false;
+        }
+
+        [SaveableProperty(1)] public TitleType TitleType { get; private set; }
+        [SaveableProperty(2)] public Settlement Fief { get; private set; }
+        [SaveableProperty(3)] public List<FeudalTitle> Vassals { get; private set; }
+        [Save
+ableProperty(4)] public Hero deJure { get; internal set; }
+        [SaveableProperty(5)] public Hero deFacto { get; internal set; }
+        [SaveableProperty(6)] public TextObject FullName { get; private set; }
+        [SaveableProperty(7)] public TextObject shortName { get; private set; }
+        [SaveableProperty(8)] public float DueTax { get; set; }
+        [SaveableProperty(9)] public FeudalTitle Sovereign { get; private set; }
+        [SaveableProperty(10)] public FeudalContract Contract { get; private set; }
+        [SaveableProperty(11)] private Dictionary<Hero, ClaimType> claims { get; set; }
+        [SaveableProperty(12)] private Dictionary<Hero, CampaignTime> ongoingClaims { get; set; }
+        [SaveableProperty(13)] private Dictionary<FeudalTitle, float> deJureDrift { get; set; }
+        [SaveableProperty(14)] public string StringId { get; private set; }
+        [SaveableProperty(15)] public bool CustomName { get; private set; }
+        [SaveableProperty(16)] public Dictionary<ContractDuty, CampaignTime> Duties { get; private set; }
+        [SaveableProperty(17)] public bool Priority { get; internal set; }
+
+        public void PostInitialize()
+        {
+            Duties ??= new Dictionary<ContractDuty, CampaignTime>();
+            if (deJure != null) Contract.PostInitialize(deJure.Clan.Kingdom, deJure.Culture);
+
+            if (!CustomName)
+            {
+                CultureObject culture = Fief != null ? Fief.Culture : (deJure != null ? deJure.Culture : null);
+                FullName = new TextObject("{=wMius2i9}{TITLE} of {NAME}")
+                                .SetTextVariable("TITLE", Utils.TextHelper.GetTitlePrefix(TitleType, culture))
+                                .SetTextVariable("NAME", shortName);
+            }
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is FeudalTitle target)
+            {
+                return Fief != null ? Fief == target.Fief : FullName == target.FullName;
+            }
+
+
+            return base.Equals(obj);
+        }
+
+        public void FulfillDuty(ContractDuty duty)
+        {
+            if (Duties.ContainsKey(duty))
+            {
+                Duties[duty] = CampaignTime.Now;
+            }
+            else
+            {
+                Duties.Add(duty, CampaignTime.Now);
+            }
+        }
+
+        public CampaignTime GetDutyTime(ContractDuty duty)
+        {
+            if (Duties.ContainsKey(duty))
+            {
+                return Duties[duty];
+            }
+
+            return CampaignTime.Zero;
+        }
+
+        public bool HasTimePassedForDuty(ContractDuty duty) => GetDutyTime(duty).ElapsedSeasonsUntilNow < duty.SeasonsDelay;
+
+        public Dictionary<FeudalTitle, float> DeJureDrifts
+        {
+            get
+            {
+                deJureDrift ??= new Dictionary<FeudalTitle, float>();
+                return deJureDrift.ToDictionary(pair => pair.Key, pair => pair.Value);
+            }
+        }
+
+        public Dictionary<Hero, ClaimType> Claims => claims ??= new Dictionary<Hero, ClaimType>();
+
+        public Dictionary<Hero, CampaignTime> OngoingClaims => ongoingClaims ??= new Dictionary<Hero, CampaignTime>();
+
+        public bool HeroHasValidClaim(Hero hero)
+        {
+            if (Claims.ContainsKey(hero))
+            {
+                return Claims[hero] != ClaimType.None && Claims[hero] != ClaimType.Ongoing;
+            }
+
+            return false;
+        }
+
+        public Hero DeFacto
+        {
+            get
+            {
+                if (Fief != null)
+                {
+                    if (Fief.IsVillage)
+                    {
+                        return Fief.Village.GetActualOwner();
+                    }
+
+                    if (Fief.OwnerClan == null) Fief = Settlement.All.First(x => x.StringId == Fief.StringId);
+                    return Fief.Owner;
+                }
+
+                var contestors = GetDeFactoHolders();
+                if (contestors.Count > 0)
+                {
+  
+                  var highestCount = contestors.Values.Max();
+                    var highestCountHeroes = contestors.Keys.Where(x => contestors[x] == highestCount).ToList();
+                    if (highestCountHeroes.Contains(deJure))
+                    {
+                        return deJure;
+                    }
+
+                    var selected = highestCountHeroes[0];
+                    if (highestCountHeroes.Count <= 1)
+                    {
+                        return selected;
+                    }
+
+                    foreach (var competitor in highestCountHeroes.Where(competitor => 
+                    (competitor != selected && competitor.Clan.Tier > selected.Clan.Tier) || competitor.Clan.Influence > selected.Clan.Influence))
+                    {
+                        selected = competitor;
+                    }
+
+                    return selected;
+                }
+                else return deJure;
+            }
+        }
+
+        public Dictionary<Hero, int> GetDeFactoHolders()
+        {
+            Dictionary<Hero, int> holders = new Dictionary<Hero, int>(10);
+            // Cycle-guarded vassal walk. The recursion terminates only via
+            // the title-tree being a real tree; if a save or a faulty title-
+            // transfer ever creates a cycle in the vassal graph (A is a
+            // vassal of B, B is a vassal of A), this would stack-overflow.
+            // The visited set converts the cycle into a clean single visit.
+            AddContestantsFromVassals(this, holders, new HashSet<FeudalTitle>());
+            return holders;
+        }
+
+        private void AddContestantsFromVassals(FeudalTitle title, Dictionary<Hero, int> contestants, HashSet<FeudalTitle> visited)
+        {
+            if (title == null || !visited.Add(title)) return;
+            if (title.Vassals != null && title.Vassals.Count > 0)
+            {
+                foreach (var vassal in title.Vassals)
+                {
+                    if (vassal == null) c
+ontinue;
+                    Hero defacto = vassal.DeFacto;
+                    if (defacto != null)
+                    {
+                        if (contestants.ContainsKey(defacto)) contestants[defacto] += 1;
+                        else contestants.Add(defacto, 1);
+                    }
+                    // Inline the recursion through the same visited set —
+                    // calling vassal.GetDeFactoHolders() would start a fresh
+                    // visited HashSet and miss cross-branch cycles.
+                    AddContestantsFromVassals(vassal, contestants, visited);
+                }
+            }
+        }
+
+        public bool Active => deJure != null || deFacto != null;
+
+        public bool IsSovereignLevel => (int) TitleType <= 1;
+
+        public void SetFullName(TextObject name)
+        {
+            FullName = name;
+        }
+
+        public void SetName(TextObject shortName)
+        {
+            this.shortName = shortName;
+        }
+
+        public void TickClaims()
+        {
+            var toAdd = new Dictionary<Hero, ClaimType>();
+            foreach (var pair in OngoingClaims)
+            {
+                if (pair.Value.RemainingDaysFromNow <= 0f)
+                {
+                    toAdd.Add(pair.Key, ClaimType.Fabricated);
+                }
+                else
+                {
+                    pair.Key.AddSkillXp(BKSkills.Instance.Lordship, 3.5f);
+                }
+            }
+
+            foreach (var pair in toAdd)
+            {
+                AddClaim(pair.Key, pair.Value);
+            }
+        }
+
+        internal void FinishClaims()
+        {
+            var toAdd = new Dictionary<Hero, ClaimType>();
+            foreach (var pair in OngoingClaims)
+            {
+                toAdd.Add(pair.Key, ClaimType.Fabricated);
+            }
+
+            foreach (var pair in toAdd)
+            {
+                AddClaim(pair.Key, pair.Value);
+            }
+        }
+
+        public void TickDrift(FeudalTitle current, float progr
+ess = 0.000793f)
+        {
+            AddDrift(current, progress);
+            List<FeudalTitle> toRemove = null;
+            foreach (var sovereign in deJureDrift.Keys.ToList().Where(sovereign => sovereign != current))
+            {
+                deJureDrift[sovereign] -= progress;
+                if (!(deJureDrift[sovereign] <= 0f))
+                {
+                    continue;
+                }
+
+                toRemove ??= new List<FeudalTitle>();
+                toRemove.Add(sovereign);
+            }
+
+            if (toRemove == null)
+            {
+                return;
+            }
+
+            foreach (var title in toRemove)
+            {
+                deJureDrift.Remove(title);
+            }
+        }
+
+        private void AddDrift(FeudalTitle newSovereign, float progress)
+        {
+            if (DeJureDrifts.ContainsKey(newSovereign))
+            {
+                deJureDrift[newSovereign] += progress;
+            }
+            else
+            {
+                deJureDrift.Add(newSovereign, 0f);
+            }
+
+            switch (deJureDrift[newSovereign])
+            {
+                case >= 1f:
+                    DriftTitle(newSovereign);
+                    break;
+                case < 0f:
+                    deJureDrift[newSovereign] = 0f;
+                    break;
+            }
+        }
+
+        public ClaimType GetHeroClaim(Hero hero)
+        {
+            if (hero == null)
+            {
+                return ClaimType.None;
+            }
+
+            if (Claims.ContainsKey(hero))
+            {
+                return Claims[hero];
+            }
+
+            if (OngoingClaims.ContainsKey(hero))
+            {
+                return ClaimType.Ongoing;
+            }
+
+            return ClaimType.None;
+        }
+
+        public void AddOngoingClaim(Hero hero)
+        {
+            if (hero == null)
+            {
+                return;
+            }
+
+            if (!OngoingClaims.ContainsKey(hero))
+            {
+                var clai
+mTime = CampaignTime.YearsFromNow(1);
+
+                var lordshipClaimant = BKPerks.Instance.LordshipClaimant;
+                if (hero.GetPerkValue(lordshipClaimant))
+                {
+                    claimTime = CampaignTime.DaysFromNow(CampaignTime.DaysInYear * 0.7f);
+                }
+                
+                OngoingClaims.Add(hero, claimTime);
+            }
+        }
+
+        public void AddClaim(Hero hero, ClaimType type, bool force = false)
+        {
+            if (hero == null || type == ClaimType.None)
+            {
+                return;
+            }
+
+            if (!Claims.ContainsKey(hero))
+            {
+                Claims.Add(hero, type);
+            }
+
+            if (OngoingClaims.ContainsKey(hero))
+            {
+                OngoingClaims.Remove(hero);
+            }
+
+            if (hero == Hero.MainHero)
+            {
+                MBInformationManager.AddQuickInformation(new TextObject("{=bdsY7u3H}You now have a claim on the {TITLE}")
+                    .SetTextVariable("TITLE", FullName));
+            }
+        }
+
+        public void RemoveClaim(Hero hero)
+        {
+            if (claims.ContainsKey(hero))
+            {
+                Claims.Remove(hero);
+            }
+        }
+
+        public void CleanClaims()
+        {
+            var currentDeFacto = DeFacto;
+            var toRemove = new List<Hero>();
+            foreach (var pair in Claims)
+            {
+                if (pair.Key.IsDead)
+                {
+                    toRemove.Add(pair.Key);
+                    continue;
+                }
+
+                if (pair.Value == ClaimType.DeFacto && pair.Key != currentDeFacto)
+                {
+                    toRemove.Add(pair.Key);
+                }
+            }
+
+            foreach (var hero in toRemove)
+            {
+                Claims.Remove(hero);
+            }
+
+            toRemove.Clear();
+            toRemove.AddRange(OngoingClaims.Keys.ToList().Where(hero => hero.IsDead));
+
+            f
+oreach (var hero in toRemove)
+            {
+                Claims.Remove(hero);
+            }
+        }
+
+        public void DriftTitle(FeudalTitle newSovereign, bool notify = true)
+        {
+            if (TitleType < TitleType.Kingdom) return;
+            
+            if (Sovereign != null && Sovereign.Vassals.Contains(this))
+            {
+                Sovereign.Vassals.Remove(this);
+            }
+            SetSovereign(newSovereign);
+            newSovereign.Vassals.Add(this);
+
+            ChangeContract(newSovereign.Contract.Government);
+            ChangeContract(newSovereign.Contract.Succession);
+            ChangeContract(newSovereign.Contract.Inheritance);
+            ChangeContract(newSovereign.Contract.GenderLaw);
+
+            if (notify)
+            {
+                InformationManager.DisplayMessage(new InformationMessage(
+                    new TextObject("{=5ryn9tJc}{TITLE} has drifted into a legal part of {SOVEREIGN}")
+                        .SetTextVariable("TITLE", FullName)
+                        .SetTextVariable("SOVEREIGN", newSovereign.FullName)
+                        .ToString()));
+            }
+        }
+
+        public void SetSovereign(FeudalTitle sovereign)
+        {
+            Sovereign = sovereign;
+            if (Vassals is {Count: > 0})
+            {
+                foreach (var vassal in Vassals)
+                {
+                    vassal.SetSovereign(sovereign);
+                }
+            }
+        }
+
+        public void SetLaws(List<DemesneLaw> laws)
+        {
+            Contract.SetLaws(laws);
+            if (Vassals is { Count: > 0 })
+            {
+                foreach (var vassal in Vassals)
+                {
+                    vassal.SetLaws(laws);
+                }
+            }
+        }
+
+        public void EnactLaw(DemesneLaw law, Hero enactor = null, bool costInfluence = true)
+        {
+            if (enactor != null)
+            {
+                law = law.GetCopy();
+                law.SetIssueDate(C
+ampaignTime.Now);
+                if (costInfluence)
+                {
+                    GainKingdomInfluenceAction.ApplyForDefault(enactor, -law.InfluenceCost);
+                }
+               
+                if (enactor.MapFaction == Hero.MainHero.MapFaction)
+                {
+                    MBInformationManager.AddQuickInformation(new TextObject("{=fvbLMV0a}The {LAW} has been enacted in the {TITLE}.")
+                        .SetTextVariable("LAW", law.Name)
+                        .SetTextVariable("TITLE", FullName),
+                        0,
+                        null,
+                        null, Utils.Helpers.GetKingdomDecisionSound());
+                }
+            }
+
+            Contract.EnactLaw(law);
+            if (Vassals is { Count: > 0 })
+            {
+                foreach (var vassal in Vassals)
+                {
+                    vassal.EnactLaw(law);
+                }
+            }
+        }
+
+        public void ChangeContract(Government government)
+        {
+            Contract.ChangeGovernment(government);
+            if (Vassals is {Count: > 0})
+            {
+                foreach (var vassal in Vassals)
+                {
+                    vassal.ChangeContract(government);
+                }
+            }
+        }
+
+        public void ChangeContract(Succession succession)
+        {
+            Contract.ChangeSuccession(succession);
+            if (Vassals is {Count: > 0})
+            {
+                foreach (var vassal in Vassals)
+                {
+                    vassal.ChangeContract(succession);
+                }
+            }
+        }
+
+        public void ChangeContract(Inheritance inheritance)
+        {
+            Contract.ChangeInheritance(inheritance);
+            if (Vassals is {Count: > 0})
+            {
+                foreach (var vassal in Vassals)
+                {
+                    vassal.ChangeContract(inheritance);
+                }
+            }
+        }
+
+        public void ChangeContract(Gend
+erLaw genderLaw)
+        {
+            Contract.ChangeGenderLaw(genderLaw);
+            if (Vassals is {Count: > 0})
+            {
+                foreach (var vassal in Vassals)
+                {
+                    vassal.ChangeContract(genderLaw);
+                }
+            }
+        }
+
+        // ContractAspects-list aspects (Conquest, Taxes). AddAspect upserts by
+        // aspect type. Propagates to vassals like the core-aspect overloads so a
+        // sovereign-level contract change is realm-wide. Without this overload,
+        // BKContractChangeDecision could only ever apply the four core aspects and
+        // a voted Conquest/Taxes change silently did nothing.
+        public void ChangeContract(ContractAspect aspect)
+        {
+            if (aspect == null) return;
+            Contract.AddAspect(aspect);
+            if (Vassals is {Count: > 0})
+            {
+                foreach (var vassal in Vassals)
+                {
+                    vassal.ChangeContract(aspect);
+                }
+            }
+        }
+    }
+
+    public enum TitleType
+    {
+        Empire,
+        Kingdom,
+        Dukedom,
+        County,
+        Barony,
+        Lordship
+    }
+
+    public enum ClaimType
+    {
+        Fabricated,
+        Previous_Owner,
+        DeFacto,
+        Clan_Split,
+        None,
+        Ongoing
+    }
+}

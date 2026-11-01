@@ -1,0 +1,65 @@
+name: BK Guard Build
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'bkfix/**'
+      - '.github/workflows/bkfix-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+
+      - name: Checkout Banner Kings v1.9.35.1
+        uses: actions/checkout@v4
+        with:
+          repository: GIO443/bannerlord-banner-kings-redux
+          ref: refs/tags/v1.9.35.1
+          path: bk
+
+      - name: Apply BKTitleGuard patches
+        shell: pwsh
+        run: |
+          Copy-Item bkfix/FeudalContract.cs -Destination bk/BannerKings/Managers/Titles/FeudalContract.cs -Force
+          Copy-Item bkfix/FeudalTitle.cs -Destination bk/BannerKings/Managers/Titles/FeudalTitle.cs -Force
+          Copy-Item bkfix/BKVolunteerModel.cs -Destination bk/BannerKings/Models/Vanilla/BKVolunteerModel.cs -Force
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore BannerKings.csproj
+        working-directory: bk/BannerKings
+
+      - name: Build
+        run: dotnet build BannerKings.csproj -c Release -p:Platform=x64 -p:SkipModuleDeploy=true -p:AppendTargetFrameworkToOutputPath=false -p:OutputPath=build_output\bin\Win64_Shipping_Client\
+        working-directory: bk/BannerKings
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BannerKings-guard
+          if-no-files-found: error
+          path: |
+            bk/BannerKings/build_output/bin/Win64_Shipping_Client/BannerKings.dll
+            bk/BannerKings/build_output/bin/Win64_Shipping_Client/BannerKings.pdb
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.9.35.1-guard1
+          name: "BannerKings 1.9.35.1 + BKTitleGuard"
+          allow_updates: true
+          files: |
+            bk/BannerKings/build_output/bin/Win64_Shipping_Client/BannerKings.dll
+            bk/BannerKings/build_output/bin/Win64_Shipping_Client/BannerKings.pdb
